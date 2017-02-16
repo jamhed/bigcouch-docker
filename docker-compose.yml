@@ -1,0 +1,95 @@
+version: '2'
+
+networks:
+  kazoo:
+    driver: bridge
+
+services:
+  rabbitmq.kazoo:
+    image: 2600hz/rabbitmq
+    container_name: rabbitmq.kazoo 
+    hostname: rabbitmq.kazoo
+#    environment:
+#      - "RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER}"
+#      - "RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS}"
+#      - "RABBITMQ_DEFAULT_VHOST=${RABBITMQ_DEFAULT_VHOST}"
+    volumes:
+      - "/etc/localtime:/etc/localtime:ro"
+    ports:
+      - "5672"
+    networks:
+      - kazoo
+
+  couchdb.kazoo:
+    image: 2600hz/couchdb
+    container_name: couchdb.kazoo
+    hostname: couchdb.kazoo
+#    environment:
+#      - "COUCHDB_USER=${COUCHDB_USER}"
+#      - "COUCHDB_PASSWORD=${COUCHDB_PASSWORD}"
+    volumes:
+      - "/etc/localtime:/etc/localtime:ro"
+      - "./couchdb_data:/usr/local/var/lib/couchdb:rw"
+    depends_on:
+      - rabbitmq.kazoo
+    networks:
+      - kazoo
+
+  kazoo.kazoo:
+    image: 2600hz/kazoo
+    container_name: kazoo.kazoo
+    hostname: kazoo.kazoo
+    stdin_open: true
+    tty: true
+    environment:
+      - "NETWORK=${NETWORK}"
+      - "COUCHDB=${COUCHDB}"
+      - "RABBITMQ=${RABBITMQ}"
+      - "NODE_NAME=${NODE_NAME}"
+      - "KAZOO_APPS=${KAZOO_APPS}"
+    depends_on:
+      - couchdb.kazoo
+    networks:
+      - kazoo
+
+  kamailio.kazoo:
+    image: 2600hz/kamailio
+    container_name: kamailio.kazoo
+    hostname: kamailio.kazoo
+    environment:
+      - "NETWORK=${NETWORK}"
+      - "RABBITMQ=${RABBITMQ}"
+    depends_on:
+      - kazoo.kazoo
+    ports:
+      - "5060/udp"
+    networks:
+      - kazoo
+
+  freeswitch.kazoo:
+    image: 2600hz/freeswitch
+    container_name: freeswitch.kazoo
+    hostname: freeswitch.kazoo
+    environment:
+      - "RABBITMQ=${RABBITMQ}"
+      - "RTP_START_PORT=${RTP_START_PORT}"
+    depends_on:
+      - kamailio.kazoo
+    ports:
+      - "10000/udp"
+#      - "10000-10999/udp"
+    networks:
+      - kazoo
+
+  monster-ui.kazoo:
+    image: 2600hz/monster-ui
+    container_name: monster-ui.kazoo
+    hostname: monster-ui.kazoo
+    environment:
+      - "NETWORK=${NETWORK}"
+      - "KAZOO=${KAZOO}"
+    depends_on:
+      - freeswitch.kazoo 
+    networks:
+      - kazoo
+
