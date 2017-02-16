@@ -15,5 +15,6 @@ echo -n "starting: $NAME "
 docker run $FLAGS \
 	--net $NETWORK \
 	-h $NAME \
+	-v "$(pwd)/couchdb_data:/usr/local/var/lib/couchdb:rw" \
 	--name $NAME \
 	2600hz/couchdb
